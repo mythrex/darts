@@ -23,8 +23,20 @@ OPS = {
 
 
 class ReLUConvBN(nn.Module):
+    """Applies ReLU, Conv and BatchNormalisation operation
+    """
 
     def __init__(self, C_in, C_out, kernel_size, stride, padding, affine=True):
+        """Initializes the operation
+
+        Args:
+            C_in (int): no of kernels in
+            C_out (int): no of kernels out
+            kernel_size (int): size of kernel
+            stride (int): stride
+            padding (int): padding
+            affine (bool), optional): Defaults to True.
+        """
         super(ReLUConvBN, self).__init__()
         self.op = nn.Sequential(
             nn.ReLU(inplace=False),
@@ -34,10 +46,20 @@ class ReLUConvBN(nn.Module):
         )
 
     def forward(self, x):
+        """Applies the ReLU, Conv, BN to input
+
+        Args:
+            x (tensor): array or tensor (can be image)
+
+        Returns:
+            tensor: array or tensor with operations applied on it
+        """
         return self.op(x)
 
 
 class DilConv(nn.Module):
+    """Applies ReLU, Conv with dilation and BatchNormalisation operation
+    """
 
     def __init__(self, C_in, C_out, kernel_size, stride, padding, dilation, affine=True):
         super(DilConv, self).__init__()
@@ -50,12 +72,23 @@ class DilConv(nn.Module):
         )
 
     def forward(self, x):
+        """Applies the ReLU, Conv, BN to input
+
+        Args:
+            x (tensor): array or tensor (can be image)
+
+        Returns:
+            tensor: array or tensor with operations applied on it
+        """
         return self.op(x)
 
 
 class SepConv(nn.Module):
+    """Applies ReLU, Sep Conv with dilation and BatchNormalisation operation
+    """
 
     def __init__(self, C_in, C_out, kernel_size, stride, padding, affine=True):
+
         super(SepConv, self).__init__()
         self.op = nn.Sequential(
             nn.ReLU(inplace=False),
@@ -71,10 +104,20 @@ class SepConv(nn.Module):
         )
 
     def forward(self, x):
+        """Applies the ReLU, Conv, BN to input
+
+        Args:
+            x (tensor): array or tensor (can be image)
+
+        Returns:
+            tensor: array or tensor with operations applied on it
+        """
         return self.op(x)
 
 
 class Identity(nn.Module):
+    """Apply the identity operation
+    """
 
     def __init__(self):
         super(Identity, self).__init__()
@@ -84,6 +127,8 @@ class Identity(nn.Module):
 
 
 class Zero(nn.Module):
+    """Makes array element zero with given stride
+    """
 
     def __init__(self, stride):
         super(Zero, self).__init__()
@@ -96,6 +141,8 @@ class Zero(nn.Module):
 
 
 class FactorizedReduce(nn.Module):
+    """Applies ReLU, conv with stride=2 and c_out/2 
+    """
 
     def __init__(self, C_in, C_out, affine=True):
         super(FactorizedReduce, self).__init__()
@@ -108,6 +155,14 @@ class FactorizedReduce(nn.Module):
         self.bn = nn.BatchNorm2d(C_out, affine=affine)
 
     def forward(self, x):
+        """concats conv and Batch normalise them
+
+        Args:
+            x (tensor): array or tensor (can be image)
+
+        Returns:
+            tensor: tensor of operations on input
+        """
         x = self.relu(x)
         out = torch.cat([self.conv_1(x), self.conv_2(x[:, :, 1:, 1:])], dim=1)
         out = self.bn(out)

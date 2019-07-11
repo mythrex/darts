@@ -111,9 +111,22 @@ class Network(nn.Module):
     Parameters:
         stem (Sequential): Sequential layer, conv and BatchNorm
         cells(ModuleList): contains all the cell of a network
+        global_pooling(nn.AdaptiveAvgPool2d): applies a 2D adaptive average pooling to output 1
+        classifier(nn.Linear): classifies into classes
     """
 
     def __init__(self, C, num_classes, layers, criterion, steps=4, multiplier=4, stem_multiplier=3):
+        """Intialise the cell list, and functions
+        The array constructed is [N(16), N(16), R(32), N(32), N(32), R(64), N(64), N(64)]
+        Args:
+            C (int): current state(initial no of channels)
+            num_classes (int): no of classes in dataset
+            layers (int): total cell layers in network
+            criterion (loss_fn): the criteria for update of weights
+            steps (int, optional): no of blocks. Defaults to 4.
+            multiplier (int, optional): factor by which . Defaults to 4.
+            stem_multiplier (int, optional): factor for stem cell output. Defaults to 3.
+        """
         super(Network, self).__init__()
         self._C = C
         self._num_classes = num_classes
@@ -157,22 +170,43 @@ class Network(nn.Module):
         return model_new
 
     def forward(self, input):
+        """Passes the input through stem, network cell
+        input -> S0 -> S1 -> N -> N -> R -> N -> N -> R -> N -> N -> pooling -> logits 
+
+        Args:
+            input (tensor): array or tensor (can be image)
+
+        Returns:
+            tensor: logits computed by passing it through network 
+        """
         s0 = s1 = self.stem(input)
-        for i, cell in enumerate(self.cells):
+        for _, cell in enumerate(self.cells):
             if cell.reduction:
                 weights = F.softmax(self.alphas_reduce, dim=-1)
             else:
                 weights = F.softmax(self.alphas_normal, dim=-1)
+            # * forward function for Cell
             s0, s1 = s1, cell(s0, s1, weights)
         out = self.global_pooling(s1)
         logits = self.classifier(out.view(out.size(0), -1))
         return logits
 
     def _loss(self, input, target):
+        """[]
+
+        Args:
+            input (tensor): logits, array or tensor (can be image)
+            target (tensor): labels, array or tensor (can be image)
+
+        Returns:
+            tensor: loss, or creterion fn that is passed
+        """
         logits = self(input)
         return self._criterion(logits, target)
 
     def _initialize_alphas(self):
+        """initialize the alphas for network
+        """
         k = sum(1 for i in range(self._steps) for n in range(2+i))
         num_ops = len(PRIMITIVES)
 
@@ -186,10 +220,19 @@ class Network(nn.Module):
         ]
 
     def arch_parameters(self):
+        """returns the arch params
+
+        Returns:
+            array: array containing alphas for normal and reduce cell
+        """
         return self._arch_parameters
 
     def genotype(self):
+        """Finds the genotype of normal and reduction cell
 
+        Returns:
+            dict: a dict containing normal, reduce genotype
+        """
         def _parse(weights):
             gene = []
             n = 2
@@ -221,8 +264,3 @@ class Network(nn.Module):
             reduce=gene_reduce, reduce_concat=concat
         )
         return genotype
-
-
-if __name__ == "__main__":
-    net = Network(16, 10, 8, nn.CrossEntropyLoss())
-    print(net)
