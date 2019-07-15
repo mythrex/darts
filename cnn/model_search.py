@@ -45,9 +45,10 @@ class Cell(nn.Module):
         reduction (boolean): if this cell is reduction cell
         preprocess0 (function): preprocessing funtion for prev to prev layer
         preprocess1 (function): preprocessing funtion for prev cell
+        cell_type (string): cell type, cell_1 / cell_2 / cell_3 / cell_4
     """
 
-    def __init__(self, steps, multiplier, C_prev_prev, C_prev, C, reduction, reduction_prev):
+    def __init__(self, steps, multiplier, C_prev_prev, C_prev, C, cell_type="cell1"):
         """Makes an array of operations for the blocks
 
             Args:
@@ -56,28 +57,22 @@ class Cell(nn.Module):
                     C_prev_prev (int): hidden state from prev prev layer
                     C_prev (int): hidden state from prev layer
                     C (int): current state
-                    reduction (bool): if this is reduction cell or not
-                    reduction_prev (bool): if prev layer was reduction
             """
 
         super(Cell, self).__init__()
-        self.reduction = reduction
 
-        if reduction_prev:
-            self.preprocess0 = FactorizedReduce(C_prev_prev, C, affine=False)
-        else:
-            self.preprocess0 = ReLUConvBN(
-                C_prev_prev, C, 1, 1, 0, affine=False)
+        self.preprocess0 = ReLUConvBN(
+            C_prev_prev, C, 1, 1, 0, affine=False)
         self.preprocess1 = ReLUConvBN(C_prev, C, 1, 1, 0, affine=False)
+        self.cell_type = cell_type
+
         self._steps = steps
         self._multiplier = multiplier
-
         self._ops = nn.ModuleList()
         self._bns = nn.ModuleList()
         for i in range(self._steps):
             for j in range(2+i):
-                stride = 2 if reduction and j < 2 else 1
-                op = MixedOp(C, stride)
+                op = MixedOp(C, 1)
                 self._ops.append(op)
 
     def forward(self, s0, s1, weights):
@@ -143,17 +138,20 @@ class Network(nn.Module):
 
         C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
         self.cells = nn.ModuleList()
-        reduction_prev = False
-        for i in range(layers):
-            if i in [layers//3, 2*layers//3]:
-                C_curr *= 2
-                reduction = True
-            else:
-                reduction = False
-            cell = Cell(steps, multiplier, C_prev_prev, C_prev,
-                        C_curr, reduction, reduction_prev)
-            reduction_prev = reduction
-            self.cells += [cell]
+
+        assert layers // 4 > 0
+
+        for i in range(layers//4):
+            cell1 = Cell(steps, multiplier, C_prev_prev, C_prev,
+                         C_curr, cell_type="cell1")
+            cell2 = Cell(steps, multiplier, C_prev_prev, C_prev,
+                         C_curr, cell_type="cell2")
+            cell3 = Cell(steps, multiplier, C_prev_prev, C_prev,
+                         C_curr, cell_type="cell3")
+            cell4 = Cell(steps, multiplier, C_prev_prev, C_prev,
+                         C_curr, cell_type="cell4")
+            self.cells += [cell1, cell2, cell3, cell4]
+
             C_prev_prev, C_prev = C_prev, multiplier*C_curr
 
         self.global_pooling = nn.AdaptiveAvgPool2d(1)
@@ -181,10 +179,14 @@ class Network(nn.Module):
         """
         s0 = s1 = self.stem(input)
         for _, cell in enumerate(self.cells):
-            if cell.reduction:
-                weights = F.softmax(self.alphas_reduce, dim=-1)
+            if cell.cell_type == "cell1":
+                weights = F.softmax(self.alphas_cell1, dim=-1)
+            elif cell.cell_type == "cell2":
+                weights = F.softmax(self.alphas_cell2, dim=-1)
+            elif cell.cell_type == "cell3":
+                weights = F.softmax(self.alphas_cell3, dim=-1)
             else:
-                weights = F.softmax(self.alphas_normal, dim=-1)
+                weights = F.softmax(self.alphas_cell4, dim=-1)
             # * forward function for Cell
             s0, s1 = s1, cell(s0, s1, weights)
         out = self.global_pooling(s1)
@@ -210,13 +212,19 @@ class Network(nn.Module):
         k = sum(1 for i in range(self._steps) for n in range(2+i))
         num_ops = len(PRIMITIVES)
 
-        self.alphas_normal = Variable(
+        self.alphas_cell1 = Variable(
             1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
-        self.alphas_reduce = Variable(
+        self.alphas_cell2 = Variable(
+            1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
+        self.alphas_cell3 = Variable(
+            1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
+        self.alphas_cell4 = Variable(
             1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
         self._arch_parameters = [
-            self.alphas_normal,
-            self.alphas_reduce,
+            self.alphas_cell1,
+            self.alphas_cell2,
+            self.alphas_cell3,
+            self.alphas_cell4
         ]
 
     def arch_parameters(self):
@@ -254,9 +262,9 @@ class Network(nn.Module):
             return gene
 
         gene_normal = _parse(
-            F.softmax(self.alphas_normal, dim=-1).data.cpu().numpy())
+            F.softmax(self.alphas_cell1, dim=-1).data.cpu().numpy())
         gene_reduce = _parse(
-            F.softmax(self.alphas_reduce, dim=-1).data.cpu().numpy())
+            F.softmax(self.alphas_cell2, dim=-1).data.cpu().numpy())
 
         concat = range(2+self._steps-self._multiplier, self._steps+2)
         genotype = Genotype(
