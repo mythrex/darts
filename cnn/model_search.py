@@ -154,8 +154,12 @@ class Network(nn.Module):
 
             C_prev_prev, C_prev = C_prev, multiplier*C_curr
 
-        self.global_pooling = nn.AdaptiveAvgPool2d(1)
-        self.classifier = nn.Linear(C_prev, num_classes)
+        self.sigmoidConv = nn.Sequential(
+            nn.ReLU(inplace=False),
+            nn.Conv2d(C_prev, C, kernel_size=1, stride=1,
+                      padding=1, dilation=0, groups=C, bias=False)
+            nn.Sigmoid(C, affine=affine)
+        )
 
         self._initialize_alphas()
 
@@ -189,9 +193,9 @@ class Network(nn.Module):
                 weights = F.softmax(self.alphas_cell4, dim=-1)
             # * forward function for Cell
             s0, s1 = s1, cell(s0, s1, weights)
-        out = self.global_pooling(s1)
-        logits = self.classifier(out.view(out.size(0), -1))
-        return logits
+
+        out = self.sigmoidConv(s1)
+        return out
 
     def _loss(self, input, target):
         """[]
@@ -261,14 +265,20 @@ class Network(nn.Module):
                 n += 1
             return gene
 
-        gene_normal = _parse(
+        gene_cell1 = _parse(
             F.softmax(self.alphas_cell1, dim=-1).data.cpu().numpy())
-        gene_reduce = _parse(
+        gene_cell2 = _parse(
+            F.softmax(self.alphas_cell2, dim=-1).data.cpu().numpy())
+        gene_cell3 = _parse(
+            F.softmax(self.alphas_cell2, dim=-1).data.cpu().numpy())
+        gene_cell4 = _parse(
             F.softmax(self.alphas_cell2, dim=-1).data.cpu().numpy())
 
         concat = range(2+self._steps-self._multiplier, self._steps+2)
         genotype = Genotype(
-            normal=gene_normal, normal_concat=concat,
-            reduce=gene_reduce, reduce_concat=concat
+            cell1=gene_cell1, cell1_concat=concat,
+            cell2=gene_cell2, cell2_concat=concat,
+            cell3=gene_cell3, cell3_concat=concat,
+            cell4=gene_cell4, cell4_concat=concat,
         )
         return genotype
