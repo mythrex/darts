@@ -32,11 +32,13 @@ class DataLoader():
         x = x.swapaxes(2, 3).swapaxes(1, 2)
         x = x.astype('float')
         # because mask is B/W
-        y = np.load(self._y_path)
-        y = y.astype('float')
-        y = y.swapaxes(2, 3).swapaxes(1, 2)
-        indices = list(range(len(x)))
+        # y = np.load(self._y_path)
+        # y = y.astype('float')
+        # y = y.swapaxes(2, 3).swapaxes(1, 2)
         # y = y / 255
+
+        indices = list(range(len(x)))
+        y = np.random.randint(0, 6, x.shape[0])
         # shuffle the array
         if self.shuffle:
             np.random.shuffle(indices)

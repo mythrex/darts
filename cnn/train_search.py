@@ -12,6 +12,7 @@ import torch.utils
 import torch.nn.functional as F
 import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
+from dataloader import DataLoader
 
 from torch.autograd import Variable
 from model_search import Network
@@ -96,17 +97,9 @@ def main(args):
         weight_decay=args.weight_decay)
 
     # * Data handling here
-    train_transform, valid_transform = utils._data_transforms_cifar10(args)
-    train_data = dset.CIFAR10(
-        root=args.data, train=True, download=True, transform=train_transform)
-
-    num_train = len(train_data)
-    indices = list(range(num_train))
-    split = int(np.floor(args.train_portion * num_train))
-
     train_data = DataLoader(
         x_path="./data/sac/train_x.npy",
-        y_path="./data/sac/train_x.npy",
+        y_path="./data/sac/train_y.npy",
         batch_size=args.batch_size,
         shuffle=True
     )
