@@ -163,9 +163,9 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
 
     for step, (input, target) in enumerate(train_queue):
         model.train()
-        # n = input.size(0)
         input = torch.tensor(input).float()
         target = torch.tensor(target).long()
+        n = input.size(0)
         input = Variable(input, requires_grad=False).cuda()
         target = Variable(target, requires_grad=False).cuda(async=True)
 
@@ -187,7 +187,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         nn.utils.clip_grad_norm(model.parameters(), args.grad_clip)
         optimizer.step()
 
-        prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+        prec1, prec5 = utils.accuracy(logits, targett scalar type, topk=(1, 5))
         objs.update(loss.data[0], n)
         top1.update(prec1.data[0], n)
         top5.update(prec5.data[0], n)
