@@ -45,7 +45,8 @@ class DataLoader():
 
         self.X = []
         self.Y = []
-        for i in tqdm(range(len(x) - self.batch_size + 1)):
+        # for i in tqdm(range(len(x) - self.batch_size + 1)):
+        for i in tqdm(range(10)):
             self.X.append(x[indices[i: i + self.batch_size]])
             self.Y.append(y[indices[i: i + self.batch_size]])
 
