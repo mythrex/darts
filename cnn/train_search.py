@@ -165,14 +165,14 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
         model.train()
         # n = input.size(0)
         input = torch.tensor(input).float()
-        target = torch.tensor(target).float()
+        target = torch.tensor(target).long()
         input = Variable(input, requires_grad=False).cuda()
         target = Variable(target, requires_grad=False).cuda(async=True)
 
         # get a random minibatch from the search queue with replacement
         input_search, target_search = next(iter(valid_queue))
         input_search = torch.tensor(input_search).float()
-        target_search = torch.tensor(target_search).float()
+        target_search = torch.tensor(target_search).long()
         input_search = Variable(input_search, requires_grad=False).cuda()
         target_search = Variable(target_search, requires_grad=False).cuda(async=True)
 
@@ -181,7 +181,7 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
 
         optimizer.zero_grad()
         logits = model(input)
-        loss = criterion(logits, target)
+        loss = criterion(logits, target.long())
 
         loss.backward()
         nn.utils.clip_grad_norm(model.parameters(), args.grad_clip)
