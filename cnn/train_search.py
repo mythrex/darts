@@ -171,6 +171,8 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
 
         # get a random minibatch from the search queue with replacement
         input_search, target_search = next(iter(valid_queue))
+        input_search = torch.tensor(input_search).float()
+        target_search = torch.tensor(target_search).float()
         input_search = Variable(input_search, requires_grad=False).cuda()
         target_search = Variable(target_search, requires_grad=False).cuda(async=True)
 
