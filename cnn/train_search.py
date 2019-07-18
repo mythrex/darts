@@ -112,6 +112,8 @@ def main(args):
         shuffle=True
     )
 
+    valid_queue = val_data.make_queue()[:5]
+
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
 
