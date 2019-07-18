@@ -207,7 +207,7 @@ def infer(valid_queue, model, criterion):
 
     for step, (input, target) in enumerate(valid_queue):
         input = torch.tensor(input).float()
-        target = torch.tensor(target).float()
+        target = torch.tensor(target).long()
         input = Variable(input, volatile=True).cuda()
         target = Variable(target, volatile=True).cuda(async=True)
 
