@@ -106,8 +106,8 @@ def main(args):
     train_queue = train_data.make_queue()[:5]
 
     val_data = DataLoader(
-        x_path="E:/URBAN_DATASET_BGH/val_x.npy",
-        y_path="E:/URBAN_DATASET_BGH/val_y.npy",
+        x_path="./data/sac/train_x.npy",
+        y_path="./data/sac/train_x.npy",
         batch_size=args.batch_size,
         shuffle=True
     )
