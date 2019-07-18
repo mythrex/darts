@@ -12,6 +12,7 @@ import torch.utils
 import torch.nn.functional as F
 import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
+from dataloader import DataLoader
 
 from torch.autograd import Variable
 from model_search import Network
@@ -106,7 +107,7 @@ def main(args):
 
     train_data = DataLoader(
         x_path="./data/sac/train_x.npy",
-        y_path="./data/sac/train_x.npy",
+        y_path="./data/sac/train_y.npy",
         batch_size=args.batch_size,
         shuffle=True
     )
