@@ -118,4 +118,6 @@ Session.vim
 # Auto-generated tag files
 tags
 
+# this project specific
 .vscode
+data

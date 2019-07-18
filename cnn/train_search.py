@@ -104,17 +104,20 @@ def main(args):
     indices = list(range(num_train))
     split = int(np.floor(args.train_portion * num_train))
 
-    train_queue = torch.utils.data.DataLoader(
-        train_data, batch_size=args.batch_size,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split]),
-        pin_memory=True, num_workers=2)
+    train_data = DataLoader(
+        x_path="./data/sac/train_x.npy",
+        y_path="./data/sac/train_x.npy",
+        batch_size=args.batch_size,
+        shuffle=True
+    )
+    train_queue = train_data.make_queue()[:5]
 
-    valid_queue = torch.utils.data.DataLoader(
-        train_data, batch_size=args.batch_size,
-        sampler=torch.utils.data.sampler.SubsetRandomSampler(
-            indices[split:num_train]),
-        pin_memory=True, num_workers=2)
-    # * till here
+    val_data = DataLoader(
+        x_path="E:/URBAN_DATASET_BGH/val_x.npy",
+        y_path="E:/URBAN_DATASET_BGH/val_y.npy",
+        batch_size=args.batch_size,
+        shuffle=True
+    )
 
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
