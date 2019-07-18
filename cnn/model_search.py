@@ -202,7 +202,7 @@ class Network(nn.Module):
             tensor: loss, or creterion fn that is passed
         """
         logits = self(input)
-        return self._criterion(logits, target)
+        return self._criterion(logits, target.long())
 
     def _initialize_alphas(self):
         """initialize the alphas for network
